@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  // Null for social-only accounts (Google / GitHub / Facebook)
+  passwordHash  String?
+  role          String    @default("STUDENT") // STUDENT | ADMIN
+  provider      String    @default("credentials") // credentials | google | github | facebook
+  emailVerified Boolean   @default(false)
+  status        String    @default("ACTIVE") // ACTIVE | SUSPENDED
+  points        Int       @default(220)
+  bottles       Int       @default(15)
+  bottlesGoal   Int       @default(50)
+  grade         String?
+  section       String?
+  rfid          String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  orders        Order[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemName    String
+  itemCost    Int
+  status      String    @default("PENDING") // PENDING | READY | RECEIVED | CANCELLED
+  placedAt    DateTime  @default(now())
+  readyAt     DateTime?
+  receivedAt  DateTime?
+  cancelledAt DateTime?
+}
