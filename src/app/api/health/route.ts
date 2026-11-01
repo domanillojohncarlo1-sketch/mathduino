@@ -15,6 +15,20 @@ export async function GET() {
       ? 'sqlite (local file)'
       : 'unset'
 
+  // Catch the classic "pasted a truncated token ending in …" mistake early
+  const token = process.env.DATABASE_AUTH_TOKEN ?? ''
+  if (mode === 'turso (hosted libSQL)' && /[^\x20-\x7E]/.test(token)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        mode,
+        error:
+          'DATABASE_AUTH_TOKEN contains invalid characters (like the … ellipsis) — the token was copied truncated. Re-copy the FULL token from chat or the Turso dashboard.',
+      },
+      { status: 500 }
+    )
+  }
+
   try {
     await db.$queryRawUnsafe('SELECT 1')
     const userCount = await db.user.count()
