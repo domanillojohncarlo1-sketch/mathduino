@@ -1,3 +1,11 @@
+/**
+ * Prisma client singleton — the ONLY file that talks to the database.
+ * Dual-mode by design:
+ *   DATABASE_URL=file:...     → local SQLite (development, zero setup)
+ *   DATABASE_URL=libsql://... → Turso hosted DB in production (Vercel),
+ *                               authenticated with DATABASE_AUTH_TOKEN.
+ * Import { db } from here everywhere; never instantiate PrismaClient twice.
+ */
 import { PrismaClient } from '@prisma/client'
 import { PrismaLibSQL } from '@prisma/adapter-libsql'
 

@@ -186,13 +186,23 @@ at home (then expose via Cloudflare Tunnel).
 
 ## 📁 Project Layout
 
+> 🗺️ **New to the code?** Read **[ARCHITECTURE.md](./ARCHITECTURE.md)** — a guided tour
+> with diagrams: how a bottle flows from the machine to the web, what every folder
+> does, and the five ideas that make the system work.
+
 ```
 src/app/page.tsx                  # role router (auth gate → student/admin portal)
 src/app/api/auth/*                # signup · login · social · session · logout
-src/app/api/student/events        # recycle / quiz event ingestion
+src/app/api/device/events         # 🤖 machine-only: bottle + quiz from ESP32
+src/app/api/student/state         # live poll endpoint (portal auto-refresh)
+src/app/api/student/events        # web-side recycle / quiz event ingestion
 src/app/api/student/orders        # place · list · remove(+refund) orders
 src/app/api/admin/orders          # fulfilment: ready / received / cancel
-src/components/mathduino/         # portals, LCD mirror, quiz, shop, order views
+src/app/api/health                # diagnostics: DB mode + counts
+src/components/mathduino/         # auth-gate → student/ · admin/ · shared/
+src/lib/db.ts                     # Prisma singleton (SQLite ↔ Turso auto-switch)
+src/lib/auth.ts                   # sessions, scrypt hashing, cookie + bearer
+src/lib/mathduino.ts              # shared types, shop catalogue, point constants
 prisma/schema.prisma              # User · Session · Order models
 prisma/seed.ts                    # demo accounts + sample data
 ```

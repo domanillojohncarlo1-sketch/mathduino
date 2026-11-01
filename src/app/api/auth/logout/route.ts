@@ -1,3 +1,7 @@
+/**
+ * POST /api/auth/logout — destroy the current session (cookie and/or
+ * bearer token) and clear the auth cookie.
+ */
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE, destroySession } from '@/lib/auth'
 

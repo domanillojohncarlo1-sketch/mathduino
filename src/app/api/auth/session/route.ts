@@ -1,3 +1,8 @@
+/**
+ * GET /api/auth/session — "who am I?" check used on page load.
+ * Reads the session from the httpOnly cookie OR the Authorization:
+ * Bearer header, so it works in browsers and on the ESP32 alike.
+ */
 import { NextResponse } from 'next/server'
 import { getSessionUser, toAuthUser } from '@/lib/auth'
 

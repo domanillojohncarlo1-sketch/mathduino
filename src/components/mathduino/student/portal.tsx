@@ -15,10 +15,10 @@ import {
   Trophy,
   Zap,
 } from 'lucide-react'
-import LcdScreen from '@/components/mathduino/lcd-screen'
-import QuizPanel from '@/components/mathduino/quiz-panel'
-import RewardShop from '@/components/mathduino/reward-shop'
-import StudentOrdersDialog from '@/components/mathduino/student-orders-dialog'
+import LcdScreen from '@/components/mathduino/shared/lcd-screen'
+import QuizPanel from './quiz-panel'
+import RewardShop from './reward-shop'
+import StudentOrdersDialog from './orders-dialog'
 import {
   BONUS_PER_CORRECT,
   POINTS_PER_BOTTLE,

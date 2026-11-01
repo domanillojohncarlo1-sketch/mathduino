@@ -1,3 +1,8 @@
+/**
+ * POST /api/auth/login — sign in with email + password.
+ * Creates a DB session returned TWO ways: an httpOnly cookie (browsers)
+ * and a bearer token in the JSON body (ESP32 firmware + iframe preview).
+ */
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { SESSION_COOKIE, createSession, toAuthUser, verifyPassword } from '@/lib/auth'

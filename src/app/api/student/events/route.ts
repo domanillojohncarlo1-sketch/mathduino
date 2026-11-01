@@ -1,3 +1,10 @@
+/**
+ * STUDENT EVENTS — requires a session (cookie or bearer).
+ *   POST { type: "recycle", ... } → simulate a bottle deposit (+points)
+ *   POST { type: "quiz", ... }    → math-quiz answer (+bonus on correct)
+ * The physical machine bypasses this route: it calls /api/device/events
+ * with its device key + the students RFID instead.
+ */
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSessionUser, toAuthUser } from '@/lib/auth'

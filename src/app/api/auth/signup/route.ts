@@ -1,3 +1,8 @@
+/**
+ * POST /api/auth/signup — create a new STUDENT account.
+ * Supplying the admin registration code (MD-ADMIN-2025) creates an ADMIN.
+ * Response mirrors /api/auth/login (user + session token).
+ */
 import { NextResponse } from 'next/server'
 import { randomBytes } from 'node:crypto'
 import { db } from '@/lib/db'

@@ -1,3 +1,8 @@
+/**
+ * POST /api/auth/social — sign in through a social-provider persona
+ * (Google / GitHub / Facebook demo flow). Creates the account on
+ * first use; response mirrors /api/auth/login.
+ */
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { SESSION_COOKIE, createSession, isValidEmail, toAuthUser } from '@/lib/auth'

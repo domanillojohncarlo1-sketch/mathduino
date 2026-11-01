@@ -1,3 +1,9 @@
+/**
+ * ADMIN ORDERS — requires an ADMIN session (cookie or bearer).
+ *   GET   → every reward order + status counts for the admin board
+ *   PATCH → advance one order: PENDING → READY → RECEIVED,
+ *           or CANCEL (points are refunded to the student automatically)
+ */
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSessionUser } from '@/lib/auth'

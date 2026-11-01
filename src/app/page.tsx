@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Recycle } from 'lucide-react'
 import AuthGate from '@/components/mathduino/auth-gate'
-import StudentPortal from '@/components/mathduino/student-portal'
-import AdminPortal from '@/components/mathduino/admin/admin-portal'
+import StudentPortal from '@/components/mathduino/student/portal'
+import AdminPortal from '@/components/mathduino/admin/portal'
 import {
   authRequest,
   clearSessionToken,

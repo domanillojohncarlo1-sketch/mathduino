@@ -1,3 +1,12 @@
+/**
+ * STUDENT ORDERS — requires a session (cookie or bearer); students only
+ * ever see their own rows.
+ *   GET    → this students reward orders
+ *   POST   → redeem a shop item { itemName, itemCost } (points + stock check)
+ *   DELETE → remove an order:
+ *             PENDING              → undo redeem, points refunded
+ *             RECEIVED / CANCELLED → history cleanup only (no refund)
+ */
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSessionUser, toAuthUser } from '@/lib/auth'
