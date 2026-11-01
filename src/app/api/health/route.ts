@@ -1,0 +1,41 @@
+import { NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+
+export const dynamic = 'force-dynamic'
+
+/**
+ * GET /api/health — deployment + database diagnostics.
+ * Also used by the ESP32 station as a "server online" check.
+ */
+export async function GET() {
+  const rawUrl = process.env.DATABASE_URL ?? ''
+  const mode = rawUrl.startsWith('libsql://')
+    ? 'turso (hosted libSQL)'
+    : rawUrl.startsWith('file:')
+      ? 'sqlite (local file)'
+      : 'unset'
+
+  try {
+    await db.$queryRawUnsafe('SELECT 1')
+    const userCount = await db.user.count()
+    return NextResponse.json({
+      ok: true,
+      mode,
+      users: userCount,
+      time: new Date().toISOString(),
+    })
+  } catch (e) {
+    return NextResponse.json(
+      {
+        ok: false,
+        mode,
+        error: e instanceof Error ? e.message : 'Unknown database error',
+        hint:
+          mode === 'unset'
+            ? 'DATABASE_URL is not set — add it in Vercel → Settings → Environment Variables, then Redeploy.'
+            : 'Check that DATABASE_URL / DATABASE_AUTH_TOKEN are correct and the deployment was redeployed after saving them.',
+      },
+      { status: 500 }
+    )
+  }
+}
