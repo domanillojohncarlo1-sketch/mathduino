@@ -151,18 +151,35 @@ String token = jsonDoc["token"].as<String>();    // then Bearer-flow /api/studen
    git remote add origin https://github.com/<you>/mathduino.git
    git push -u origin main
    ```
-2. **Deploy on [Vercel](https://vercel.com)** (free hobby plan, native Next.js support):
-   * Import the repo → framework auto-detected
-   * Add env var `DATABASE_URL` (see caveat below)
-   * Deploy → you get `https://<project>.vercel.app`
-3. Point the ESP32 firmware's `SERVER` constant at that URL (use HTTPS; the ESP32's
+2. **Create a free Turso database** (hosted SQLite — persistent on Vercel):
+   * Sign up at [turso.app](https://turso.app) → **Create database** (name it `mathduino`, location closest to your school)
+   * Copy the **Database URL** (looks like `libsql://mathduino-<you>.turso.io`)
+   * Create a **database token** and copy it (long `eyJ…` string)
+3. **Deploy on [Vercel](https://vercel.com)** (free hobby plan, native Next.js support):
+   * Import the repo → framework auto-detected → Deploy once (it will build fine even before env vars)
+   * Then **Settings → Environment Variables** and add exactly these three:
+
+     | Name | Value | Notes |
+     |------|-------|-------|
+     | `DATABASE_URL` | `libsql://mathduino-<you>.turso.io` | from Turso |
+     | `DATABASE_AUTH_TOKEN` | `eyJ…` | the Turso database token |
+     | `MD_DEVICE_KEY` | any long random string | must match the ESP32 firmware's key |
+
+   * **Redeploy** so the new env vars take effect
+4. **Create the tables in Turso** (one-time, from your PC):
+   ```bash
+   # .env → TURSO_DATABASE_URL / TURSO_AUTH_TOKEN (same values as Vercel)
+   bun install
+   bun run db:push:turso
+   ```
+   Users then sign up in the app itself (admin registration code: `MD-ADMIN-2025`).
+5. Point the ESP32 firmware's `SERVER` constant at that URL (use HTTPS; the ESP32's
    TLS stack accepts Vercel's certs — set the root CA or use `client.setInsecure()` for prototyping).
 
-> **⚠️ Database persistence caveat:** SQLite writes to the serverless filesystem,
-> which is **ephemeral on Vercel** — data resets between invocations. Perfect for
-> demos; for durable data swap to [Turso](https://turso.tech) (SQLite-compatible,
-> free tier — change the Prisma provider to `libsql`) or any hosted Postgres
-> (Neon/Supabase) and update `DATABASE_URL`.
+> **Why not plain SQLite on Vercel?** The serverless filesystem is **ephemeral** —
+> a `file:` database would be wiped between requests. Turso speaks the same SQLite
+> dialect over the network, so this repo runs **both** ways unchanged:
+> `file:` locally, `libsql://` in production — picked automatically at runtime.
 
 Alternatives that run this repo as-is: Railway · Render · Fly.io · a Raspberry Pi
 at home (then expose via Cloudflare Tunnel).
