@@ -33,32 +33,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 })
   }
 
-  const user = await db.user.findUnique({ where: { email } })
-  if (!user) {
+  try {
+    const user = await db.user.findUnique({ where: { email } })
+    if (!user) {
+      return NextResponse.json(
+        { error: 'No account found with this email address.' },
+        { status: 404 }
+      )
+    }
+
+    // Hosted DB may predate this table — create it if missing (no-op otherwise).
+    await ensurePasswordResetTable()
+
+    // One live code per account — older codes become invalid immediately.
+    const code = String(randomInt(100000, 1000000))
+    await db.passwordReset.deleteMany({ where: { userId: user.id } })
+    await db.passwordReset.create({
+      data: {
+        userId: user.id,
+        code,
+        expiresAt: new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000),
+      },
+    })
+
+    return NextResponse.json({
+      sent: true,
+      expiresInMin: CODE_TTL_MINUTES,
+      // Demo mode: no mail provider, so the "email" is surfaced in the UI.
+      demoCode: code,
+    })
+  } catch (error) {
+    // Never leak a silent empty 500 — always answer with a readable message.
+    console.error('[forgot-password]', error)
+    const message = error instanceof Error ? error.message : 'Unexpected error.'
     return NextResponse.json(
-      { error: 'No account found with this email address.' },
-      { status: 404 }
+      { error: `Could not issue a reset code right now. (${message})` },
+      { status: 500 }
     )
   }
-
-  // Hosted DB may predate this table — create it if missing (no-op otherwise).
-  await ensurePasswordResetTable()
-
-  // One live code per account — older codes become invalid immediately.
-  const code = String(randomInt(100000, 1000000))
-  await db.passwordReset.deleteMany({ where: { userId: user.id } })
-  await db.passwordReset.create({
-    data: {
-      userId: user.id,
-      code,
-      expiresAt: new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000),
-    },
-  })
-
-  return NextResponse.json({
-    sent: true,
-    expiresInMin: CODE_TTL_MINUTES,
-    // Demo mode: no mail provider, so the "email" is surfaced in the UI.
-    demoCode: code,
-  })
 }

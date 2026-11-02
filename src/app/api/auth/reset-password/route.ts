@@ -36,41 +36,51 @@ export async function POST(req: Request) {
     )
   }
 
-  const user = await db.user.findUnique({ where: { email } })
-  if (!user) {
-    return NextResponse.json({ error: 'No account found with this email address.' }, { status: 404 })
-  }
+  try {
+    const user = await db.user.findUnique({ where: { email } })
+    if (!user) {
+      return NextResponse.json({ error: 'No account found with this email address.' }, { status: 404 })
+    }
 
-  // Hosted DB may predate this table — create it if missing (no-op otherwise).
-  await ensurePasswordResetTable()
+    // Hosted DB may predate this table — create it if missing (no-op otherwise).
+    await ensurePasswordResetTable()
 
-  const reset = await db.passwordReset.findFirst({
-    where: { userId: user.id, code },
-    orderBy: { createdAt: 'desc' },
-  })
-  if (!reset) {
-    return NextResponse.json({ error: 'Invalid reset code — check and try again.' }, { status: 400 })
-  }
-  if (reset.expiresAt.getTime() < Date.now()) {
-    await db.passwordReset.deleteMany({ where: { userId: user.id } })
+    const reset = await db.passwordReset.findFirst({
+      where: { userId: user.id, code },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!reset) {
+      return NextResponse.json({ error: 'Invalid reset code — check and try again.' }, { status: 400 })
+    }
+    if (reset.expiresAt.getTime() < Date.now()) {
+      await db.passwordReset.deleteMany({ where: { userId: user.id } })
+      return NextResponse.json(
+        { error: 'This reset code expired — request a new one.' },
+        { status: 400 }
+      )
+    }
+
+    await db.$transaction([
+      db.user.update({
+        where: { id: user.id },
+        data: { passwordHash: hashPassword(password) },
+      }),
+      // Consume every code and force re-login on other devices.
+      db.passwordReset.deleteMany({ where: { userId: user.id } }),
+      db.session.deleteMany({ where: { userId: user.id } }),
+    ])
+
+    const res = NextResponse.json({ ok: true })
+    // Best-effort: clear the stale session cookie in this browser too.
+    res.cookies.set(SESSION_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+    return res
+  } catch (error) {
+    // Never leak a silent empty 500 — always answer with a readable message.
+    console.error('[reset-password]', error)
+    const message = error instanceof Error ? error.message : 'Unexpected error.'
     return NextResponse.json(
-      { error: 'This reset code expired — request a new one.' },
-      { status: 400 }
+      { error: `Could not update the password right now. (${message})` },
+      { status: 500 }
     )
   }
-
-  await db.$transaction([
-    db.user.update({
-      where: { id: user.id },
-      data: { passwordHash: hashPassword(password) },
-    }),
-    // Consume every code and force re-login on other devices.
-    db.passwordReset.deleteMany({ where: { userId: user.id } }),
-    db.session.deleteMany({ where: { userId: user.id } }),
-  ])
-
-  const res = NextResponse.json({ ok: true })
-  // Best-effort: clear the stale session cookie in this browser too.
-  res.cookies.set(SESSION_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
-  return res
 }
