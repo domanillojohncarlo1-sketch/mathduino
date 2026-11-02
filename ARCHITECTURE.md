@@ -67,7 +67,7 @@ src/
 ├── app/
 │   ├── page.tsx                  ← single route: renders AuthGate → Student/Admin portal
 │   └── api/                      ← ALL backend endpoints (one folder per URL)
-│       ├── auth/                 ← login · signup · session · logout · social
+│       ├── auth/                 ← login · session · logout (NO public signup)
 │       ├── device/events/        ← 🤖 MACHINE-ONLY: bottle + quiz from ESP32 (device key)
 │       ├── student/
 │       │   ├── state/            ← live poll endpoint (portal refreshes from here)
@@ -154,7 +154,6 @@ simple, deployable anywhere, and fast enough for a hallway machine.
 | Endpoint | Auth | Purpose |
 |---|---|---|
 | `POST /api/auth/login` | — | sign in → cookie + bearer token |
-| `POST /api/auth/signup` | — | create student (or admin with code) |
 | `GET  /api/auth/session` | cookie/bearer | current user |
 | `POST /api/auth/logout` | cookie/bearer | end session |
 | `POST /api/device/events` | `X-Device-Key` | 🤖 machine: recycle / quiz by RFID |
@@ -162,6 +161,7 @@ simple, deployable anywhere, and fast enough for a hallway machine.
 | `POST /api/student/events` | cookie/bearer | web-side recycle / quiz |
 | `GET/POST/DELETE /api/student/orders` | cookie/bearer | list / redeem / remove orders |
 | `GET/PATCH /api/admin/orders` | **admin** | fulfilment board |
+| `POST /api/admin/demo-reset` | **admin** | factory reset: 0 bottles / 0 points / no orders |
 | `GET  /api/admin/device` | **admin** | device key + firmware values |
 | `GET  /api/health` | — | diagnostics (DB mode, user count) |
 

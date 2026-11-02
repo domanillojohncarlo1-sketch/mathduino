@@ -62,26 +62,6 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'tote', name: 'Eco Tote Pouch', icon: Backpack, points: 500, stock: 3, tag: 'Upcycled fabric' },
 ]
 
-/* ---------------- Admin: stations ---------------- */
-
-export type StationStatus = 'ONLINE' | 'NEEDS_RESET' | 'REBOOTING' | 'OFFLINE'
-
-export interface RecyclerStation {
-  id: string
-  name: string
-  location: string
-  ip: string
-  status: StationStatus
-  bottlesToday: number
-  uptime: string
-}
-
-export const STATIONS_INITIAL: RecyclerStation[] = [
-  { id: 'MD-01', name: 'Station 1', location: 'Library Corridor', ip: '192.168.1.81', status: 'ONLINE', bottlesToday: 42, uptime: '14d 06:22' },
-  { id: 'MD-02', name: 'Station 2', location: 'Canteen', ip: '192.168.1.82', status: 'NEEDS_RESET', bottlesToday: 27, uptime: '2d 11:04' },
-  { id: 'MD-03', name: 'Station 3', location: 'Science Wing', ip: '192.168.1.83', status: 'OFFLINE', bottlesToday: 0, uptime: '—' },
-]
-
 /* ---------------- Admin: student records ---------------- */
 
 export interface StudentRecord {
@@ -96,7 +76,7 @@ export interface StudentRecord {
 }
 
 export const STUDENTS_INITIAL: StudentRecord[] = [
-  { id: 'S1', rfid: 'RF-8823', name: 'Juan Dela Cruz', grade: 'Grade 6', section: 'Sampaguita', points: 220, bottles: 15, status: 'ACTIVE' },
+  { id: 'S1', rfid: 'RF-8823', name: 'Juan Dela Cruz', grade: 'Grade 6', section: 'Sampaguita', points: 0, bottles: 0, status: 'ACTIVE' },
   { id: 'S2', rfid: 'RF-1042', name: 'Maria Santos', grade: 'Grade 6', section: 'Sampaguita', points: 385, bottles: 27, status: 'ACTIVE' },
   { id: 'S3', rfid: 'RF-3344', name: 'Sofia Ramos', grade: 'Grade 5', section: 'Molave', points: 460, bottles: 33, status: 'ACTIVE' },
   { id: 'S4', rfid: 'RF-2210', name: 'Andrea Reyes', grade: 'Grade 5', section: 'Molave', points: 140, bottles: 9, status: 'ACTIVE' },

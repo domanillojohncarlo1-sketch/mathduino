@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { initialsOf, type AuthUser } from '@/lib/auth-types'
+import DemoResetButton from '@/components/mathduino/admin/demo-reset-button'
 import LiveView from '@/components/mathduino/admin/live-view'
 import ReportsView from '@/components/mathduino/admin/reports-view'
 import UsersView from '@/components/mathduino/admin/users-view'
@@ -73,6 +74,8 @@ export default function AdminPortal({ user, onLogout }: AdminPortalProps) {
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <DemoResetButton />
+
             <span className="hidden items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-bold tracking-[0.2em] text-emerald-300 md:inline-flex">
               <span className="relative flex size-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />

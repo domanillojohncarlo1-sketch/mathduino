@@ -53,9 +53,10 @@ bun run dev                 # http://localhost:3000
 | Student | `student@mathduino.io` | `student123` |
 | Admin | `admin@mathduino.io` | `admin123` |
 
-> Admin sign-ups via the **SIGN UP** tab require the access code `MD-ADMIN-2025`.
-> Social buttons use simulated provider personas — swap in real NextAuth OAuth
-> credentials to go live.
+> There is **no public sign-up** — the two accounts above are pre-provisioned
+> and are the only accounts the demo needs. Admins can wipe the demo back to
+> its zero-state (0 bottles / 0 points, no orders) anytime via **RESET DEMO**
+> in the admin header.
 
 ## 🔌 API Reference (ESP32-facing)
 
@@ -192,12 +193,13 @@ at home (then expose via Cloudflare Tunnel).
 
 ```
 src/app/page.tsx                  # role router (auth gate → student/admin portal)
-src/app/api/auth/*                # signup · login · social · session · logout
+src/app/api/auth/*                # login · session · logout (no public signup)
 src/app/api/device/events         # 🤖 machine-only: bottle + quiz from ESP32
 src/app/api/student/state         # live poll endpoint (portal auto-refresh)
 src/app/api/student/events        # web-side recycle / quiz event ingestion
 src/app/api/student/orders        # place · list · remove(+refund) orders
 src/app/api/admin/orders          # fulfilment: ready / received / cancel
+src/app/api/admin/demo-reset      # one-click factory reset of demo data
 src/app/api/health                # diagnostics: DB mode + counts
 src/components/mathduino/         # auth-gate → student/ · admin/ · shared/
 src/lib/db.ts                     # Prisma singleton (SQLite ↔ Turso auto-switch)

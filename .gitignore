@@ -67,3 +67,4 @@ db/*.sqlite
 /public/mathduino-project.zip
 # but keep the env template
 !.env.example
+tool-results/

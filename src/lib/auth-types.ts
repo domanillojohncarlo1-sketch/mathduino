@@ -5,6 +5,7 @@
 
 export type UserRole = 'STUDENT' | 'ADMIN'
 
+/** Providers an account may have been created with (legacy social accounts). */
 export type SocialProvider = 'google' | 'github' | 'facebook'
 
 export type AuthProvider = 'credentials' | SocialProvider
@@ -35,55 +36,9 @@ export interface AuthErrorResponse {
 }
 
 /* ------------------------------------------------------------
- * Role verification
- * ------------------------------------------------------------ */
-
-/**
- * Access code required to register an ADMIN account.
- * In production this would be an email-domain check / invite link;
- * the demo uses a shared club code shown on the sign-up card.
- */
-export const ADMIN_ACCESS_CODE = 'MD-ADMIN-2025'
-
-/* ------------------------------------------------------------
- * Social sign-in (simulated OAuth consent flow)
- * ------------------------------------------------------------
- * These personas are seeded into the database, so choosing one
- * performs a real provider-account login against the API.
- * Plug real OAuth credentials into NextAuth providers to go live.
- */
-
-export interface SocialPersona {
-  email: string
-  name: string
-  role: UserRole
-  /** GitHub @handle shown on the account chooser. */
-  handle?: string
-}
-
-export const SOCIAL_PERSONAS: Record<SocialProvider, SocialPersona[]> = {
-  google: [
-    { email: 'alex.rivera@gmail.com', name: 'Alex Rivera', role: 'STUDENT' },
-    { email: 'ma.santos@gmail.com', name: 'Ma. Cristina Santos', role: 'ADMIN' },
-  ],
-  github: [
-    { email: 'alex.dev@users.noreply.github.com', name: 'Alex Rivera', role: 'STUDENT', handle: 'alexrivera-dev' },
-    { email: 'md.admin@users.noreply.github.com', name: 'MD Club Admin', role: 'ADMIN', handle: 'md-eco-club' },
-  ],
-  facebook: [
-    { email: 'alex.rivera@facebook.com', name: 'Alex Rivera', role: 'STUDENT' },
-    { email: 'maria.santos@facebook.com', name: 'Maria Santos', role: 'ADMIN' },
-  ],
-}
-
-export const PROVIDER_LABEL: Record<SocialProvider, string> = {
-  google: 'Google',
-  github: 'GitHub',
-  facebook: 'Facebook',
-}
-
-/* ------------------------------------------------------------
  * Demo quick-fill credentials (seeded accounts)
+ * Accounts are pre-provisioned via prisma/seed.ts — there is no
+ * public sign-up endpoint in the demo.
  * ------------------------------------------------------------ */
 
 export const DEMO_ACCOUNTS = {
@@ -149,7 +104,7 @@ export function firstNameOf(name: string): string {
 /**
  * Parse the body of an API call; throws with a readable message on failure.
  * Automatically attaches the mirrored session token as a Bearer header and
- * persists tokens returned by auth endpoints (login / signup / social).
+ * persists tokens returned by auth endpoints (login).
  */
 export async function authRequest<T>(
   url: string,
