@@ -14,7 +14,6 @@ import {
   Zap,
 } from 'lucide-react'
 import {
-  BONUS_PER_CORRECT,
   QUIZ_LENGTH,
   QUIZ_TIME,
   generateQuiz,
@@ -22,14 +21,9 @@ import {
 } from '@/lib/mathduino'
 import { cn } from '@/lib/utils'
 
-interface QuizPanelProps {
-  /** Called once when a finished quiz hands back the number of correct answers. */
-  onFinish: (correct: number) => void
-}
-
 type Phase = 'idle' | 'active' | 'done'
 
-export default function QuizPanel({ onFinish }: QuizPanelProps) {
+export default function QuizPanel() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [idx, setIdx] = useState(0)
@@ -40,12 +34,10 @@ export default function QuizPanel({ onFinish }: QuizPanelProps) {
   const scoreRef = useRef(0)
   const advanceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const stateRef = useRef({ phase, questions, idx, selected })
-  const onFinishRef = useRef(onFinish)
 
-  // Keep the latest quiz state & callback accessible from stable timers.
+  // Keep the latest quiz state accessible from stable timers.
   useEffect(() => {
     stateRef.current = { phase, questions, idx, selected }
-    onFinishRef.current = onFinish
   })
 
   useEffect(
@@ -79,7 +71,6 @@ export default function QuizPanel({ onFinish }: QuizPanelProps) {
     advanceRef.current = setTimeout(() => {
       if (i + 1 >= qs.length) {
         setPhase('done')
-        onFinishRef.current(scoreRef.current)
       } else {
         setIdx(i + 1)
         setSelected(null)
@@ -108,8 +99,9 @@ export default function QuizPanel({ onFinish }: QuizPanelProps) {
         <div>
           <h3 className="text-lg font-bold text-slate-100">Sharpen your math skills</h3>
           <p className="mx-auto mt-1.5 max-w-sm text-sm text-slate-400">
-            Five timed questions — addition, subtraction, multiplication and division. Every
-            correct answer earns a <span className="font-semibold text-emerald-300">+{BONUS_PER_CORRECT} bonus point</span> on your machine balance.
+            Five timed questions — addition, subtraction, multiplication and division.
+            <span className="font-semibold text-emerald-300"> Practice only</span> — points are
+            earned at the machine by recycling bottles.
           </p>
         </div>
         <Button
@@ -128,7 +120,6 @@ export default function QuizPanel({ onFinish }: QuizPanelProps) {
   }
 
   if (phase === 'done') {
-    const bonus = score * BONUS_PER_CORRECT
     const message =
       score === QUIZ_LENGTH
         ? 'Perfect score — outstanding!'
@@ -150,14 +141,9 @@ export default function QuizPanel({ onFinish }: QuizPanelProps) {
           <p className="mt-2 text-sm text-slate-300">{message}</p>
           <Badge
             variant="outline"
-            className={cn(
-              'mt-3 font-mono',
-              bonus > 0
-                ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-                : 'border-slate-700 text-slate-400'
-            )}
+            className="mt-3 border-slate-700 font-mono text-slate-400"
           >
-            {bonus > 0 ? `+${bonus} BONUS PTS ADDED` : 'NO BONUS THIS ROUND'}
+            PRACTICE COMPLETE · NO POINTS AWARDED
           </Badge>
         </div>
         <Button

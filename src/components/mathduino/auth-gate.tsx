@@ -2,37 +2,32 @@
 
 // ============================================================
 // MathDuino — Authentication gate
-// Two SEPARATED portal experiences:
-//   · STUDENT — sign in · create student account (name+email+password)
-//   · ADMIN   — sign in · create admin account (requires access code)
-// Every new account starts at the demo zero-state: 0 bottles / 0 points.
+// Two SEPARATED portal experiences with pre-provisioned accounts
+// (no self-serve signup — accounts are created ahead of the demo):
+//   · STUDENT — sign in only
+//   · ADMIN   — sign in only
 // ============================================================
 
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   AlertCircle,
   Eye,
   EyeOff,
   GraduationCap,
-  KeyRound,
   Loader2,
   LogIn,
   Recycle,
   ShieldCheck,
   ShoppingBag,
   Sigma,
-  UserPlus,
-  Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import {
-  ADMIN_ACCESS_CODE,
   DEMO_ACCOUNTS,
   authRequest,
   firstNameOf,
@@ -50,7 +45,6 @@ interface AuthGateProps {
 
 export default function AuthGate({ onAuthed }: AuthGateProps) {
   const [role, setRole] = useState<UserRole>('STUDENT')
-  const [tab, setTab] = useState<'signin' | 'signup'>('signin')
 
   /* ---- Sign in (shared by both portals) ---- */
   const [siEmail, setSiEmail] = useState('')
@@ -84,53 +78,8 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
     }
   }
 
-  /* ---- Create account (separated per role) ---- */
-  const [suName, setSuName] = useState('')
-  const [suEmail, setSuEmail] = useState('')
-  const [suPassword, setSuPassword] = useState('')
-  const [suShowPw, setSuShowPw] = useState(false)
-  const [suAdminCode, setSuAdminCode] = useState('')
-  const [suBusy, setSuBusy] = useState(false)
-  const [suError, setSuError] = useState<string | null>(null)
-
-  const doSignUp = async () => {
-    if (suBusy) return
-    const name = suName.trim()
-    const email = suEmail.trim().toLowerCase()
-    if (name.length < 2) return setSuError('Please enter your full name.')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setSuError('Please enter a valid email address.')
-    if (suPassword.length < 6) return setSuError('Password must be at least 6 characters.')
-    if (role === 'ADMIN' && suAdminCode !== ADMIN_ACCESS_CODE) {
-      return setSuError('Invalid admin access code — admins must verify with the club code.')
-    }
-    setSuBusy(true)
-    setSuError(null)
-    try {
-      const { user } = await authRequest<{ user: AuthUser }>('/api/auth/signup', {
-        name,
-        email,
-        password: suPassword,
-        role,
-        adminCode: role === 'ADMIN' ? suAdminCode : undefined,
-      })
-      toast.success(
-        role === 'ADMIN'
-          ? `Admin account created — welcome, ${firstNameOf(user.name)}!`
-          : `Student account created — welcome, ${firstNameOf(user.name)}!`
-      )
-      onAuthed(user)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Account creation failed.'
-      setSuError(msg)
-      toast.error(msg)
-    } finally {
-      setSuBusy(false)
-    }
-  }
-
   const switchRole = (r: UserRole) => {
     setRole(r)
-    setSuError(null)
     setSiError(null)
   }
 
@@ -179,9 +128,9 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
 
           <ul className="mt-8 space-y-3.5">
             {[
-              { icon: GraduationCap, label: 'Student portal — earn points, take quizzes, shop rewards' },
-              { icon: ShieldCheck, label: 'Admin portal — separate accounts, verified by access code' },
-              { icon: ShoppingBag, label: 'Every new account starts clean: 0 bottles · 0 points' },
+              { icon: GraduationCap, label: 'Student portal — recycle bottles, practice quizzes, shop rewards' },
+              { icon: ShieldCheck, label: 'Admin portal — monitor the station, fulfil reward orders' },
+              { icon: ShoppingBag, label: 'Points come from the machine — the online quiz is practice-only' },
             ].map((f) => (
               <li key={f.label} className="flex items-start gap-3 text-sm text-slate-300">
                 <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
@@ -224,9 +173,7 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
                   MATHDUINO PORTAL
                 </p>
                 <h1 className="mt-0.5 text-lg font-bold text-slate-100">
-                  {tab === 'signin'
-                    ? `Sign in as ${role === 'ADMIN' ? 'administrator' : 'student'}`
-                    : `Create a ${role === 'ADMIN' ? 'new admin' : 'new student'} account`}
+                  Sign in as {role === 'ADMIN' ? 'administrator' : 'student'}
                 </h1>
               </div>
             </div>
@@ -278,284 +225,114 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
               ))}
             </div>
 
-            <Tabs
-              value={tab}
-              onValueChange={(v) => {
-                setTab(v as 'signin' | 'signup')
-                setSiError(null)
-                setSuError(null)
+            {/* --------------- SIGN IN --------------- */}
+            <motion.form
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.05, ease: 'easeOut' }}
+              className="mt-6 space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                doSignIn(siEmail, siPassword)
               }}
             >
-              <TabsList className="mt-5 grid h-11 w-full grid-cols-2 bg-slate-950/70">
-                <TabsTrigger
-                  value="signin"
-                  className="font-mono text-[11px] font-bold tracking-[0.2em] data-[state=active]:text-emerald-300"
-                >
-                  SIGN IN
-                </TabsTrigger>
-                <TabsTrigger
-                  value="signup"
-                  className="font-mono text-[11px] font-bold tracking-[0.2em] data-[state=active]:text-emerald-300"
-                >
-                  <UserPlus className="mr-1 inline size-3" aria-hidden />
-                  CREATE ACCOUNT
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+              <div className="space-y-1.5">
+                <Label htmlFor="si-email" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                  EMAIL ADDRESS
+                </Label>
+                <Input
+                  id="si-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Enter your email"
+                  value={siEmail}
+                  onChange={(e) => setSiEmail(e.target.value)}
+                  className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
+                />
+              </div>
 
-            <AnimatePresence mode="wait" initial={false}>
-              {/* --------------- SIGN IN --------------- */}
-              {tab === 'signin' && (
-                <motion.form
-                  key="signin"
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.22, ease: 'easeOut' }}
-                  className="mt-6 space-y-4"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    doSignIn(siEmail, siPassword)
-                  }}
-                >
-                  <div className="space-y-1.5">
-                    <Label htmlFor="si-email" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                      EMAIL ADDRESS
-                    </Label>
-                    <Input
-                      id="si-email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="Enter your email"
-                      value={siEmail}
-                      onChange={(e) => setSiEmail(e.target.value)}
-                      className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="si-password" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                      PASSWORD
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="si-password"
-                        type={siShowPw ? 'text' : 'password'}
-                        autoComplete="current-password"
-                        placeholder="••••••••"
-                        value={siPassword}
-                        onChange={(e) => setSiPassword(e.target.value)}
-                        className="h-11 border-slate-700 bg-slate-950/60 pr-11 focus-visible:ring-emerald-500/50"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSiShowPw((v) => !v)}
-                        aria-label={siShowPw ? 'Hide password' : 'Show password'}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-emerald-300"
-                      >
-                        {siShowPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {siError && (
-                    <p role="alert" className="flex items-center gap-1.5 text-xs text-red-300">
-                      <AlertCircle className="size-3.5 shrink-0" aria-hidden />
-                      {siError}
-                    </p>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={siBusy}
-                    className="h-11 w-full bg-emerald-500 font-bold tracking-wider text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:bg-emerald-400"
+              <div className="space-y-1.5">
+                <Label htmlFor="si-password" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                  PASSWORD
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="si-password"
+                    type={siShowPw ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={siPassword}
+                    onChange={(e) => setSiPassword(e.target.value)}
+                    className="h-11 border-slate-700 bg-slate-950/60 pr-11 focus-visible:ring-emerald-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSiShowPw((v) => !v)}
+                    aria-label={siShowPw ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-emerald-300"
                   >
-                    {siBusy ? (
-                      <Loader2 className="size-4 animate-spin" aria-hidden />
-                    ) : (
-                      <LogIn className="size-4" aria-hidden />
-                    )}
-                    {role === 'ADMIN' ? 'SIGN IN TO ADMIN' : 'SIGN IN TO STUDENT'}
-                  </Button>
+                    {siShowPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                  </button>
+                </div>
+              </div>
 
-                  {/* Demo quick-fill — the two pre-provisioned accounts */}
-                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      disabled={siBusy}
-                      onClick={() => {
-                        switchRole('STUDENT')
-                        setSiEmail(DEMO_ACCOUNTS.student.email)
-                        setSiPassword(DEMO_ACCOUNTS.student.password)
-                        doSignIn(DEMO_ACCOUNTS.student.email, DEMO_ACCOUNTS.student.password)
-                      }}
-                      className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
-                    >
-                      <GraduationCap className="mr-1 inline size-3 text-emerald-400" aria-hidden />
-                      TRY STUDENT DEMO
-                    </button>
-                    <button
-                      type="button"
-                      disabled={siBusy}
-                      onClick={() => {
-                        switchRole('ADMIN')
-                        setSiEmail(DEMO_ACCOUNTS.admin.email)
-                        setSiPassword(DEMO_ACCOUNTS.admin.password)
-                        doSignIn(DEMO_ACCOUNTS.admin.email, DEMO_ACCOUNTS.admin.password)
-                      }}
-                      className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
-                    >
-                      <ShieldCheck className="mr-1 inline size-3 text-emerald-400" aria-hidden />
-                      TRY ADMIN DEMO
-                    </button>
-                  </div>
-                </motion.form>
+              {siError && (
+                <p role="alert" className="flex items-center gap-1.5 text-xs text-red-300">
+                  <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                  {siError}
+                </p>
               )}
 
-              {/* --------------- CREATE ACCOUNT --------------- */}
-              {tab === 'signup' && (
-                <motion.form
-                  key={`signup-${role}`}
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.22, ease: 'easeOut' }}
-                  className="mt-6 space-y-4"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    doSignUp()
+              <Button
+                type="submit"
+                disabled={siBusy}
+                className="h-11 w-full bg-emerald-500 font-bold tracking-wider text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:bg-emerald-400"
+              >
+                {siBusy ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <LogIn className="size-4" aria-hidden />
+                )}
+                {role === 'ADMIN' ? 'SIGN IN TO ADMIN' : 'SIGN IN TO STUDENT'}
+              </Button>
+
+              {/* Demo quick-fill — the pre-provisioned accounts */}
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={siBusy}
+                  onClick={() => {
+                    switchRole('STUDENT')
+                    setSiEmail(DEMO_ACCOUNTS.student.email)
+                    setSiPassword(DEMO_ACCOUNTS.student.password)
+                    doSignIn(DEMO_ACCOUNTS.student.email, DEMO_ACCOUNTS.student.password)
                   }}
+                  className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
                 >
-                  {role === 'STUDENT' ? (
-                    <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-[11px] leading-relaxed text-slate-300">
-                      <GraduationCap className="mr-1 inline size-3.5 text-emerald-400" aria-hidden />
-                      Student account — recycle bottles, answer math challenges, spend points in
-                      the reward shop. Starts at <span className="font-semibold text-emerald-300">0 bottles · 0 points</span>.
-                    </p>
-                  ) : (
-                    <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-slate-300">
-                      <ShieldCheck className="mr-1 inline size-3.5 text-amber-400" aria-hidden />
-                      Administrator account — monitor the station, fulfil reward orders. Requires
-                      the club access code below.
-                    </p>
-                  )}
+                  <GraduationCap className="mr-1 inline size-3 text-emerald-400" aria-hidden />
+                  TRY STUDENT DEMO
+                </button>
+                <button
+                  type="button"
+                  disabled={siBusy}
+                  onClick={() => {
+                    switchRole('ADMIN')
+                    setSiEmail(DEMO_ACCOUNTS.admin.email)
+                    setSiPassword(DEMO_ACCOUNTS.admin.password)
+                    doSignIn(DEMO_ACCOUNTS.admin.email, DEMO_ACCOUNTS.admin.password)
+                  }}
+                  className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+                >
+                  <ShieldCheck className="mr-1 inline size-3 text-emerald-400" aria-hidden />
+                  TRY ADMIN DEMO
+                </button>
+              </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="su-name" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                      FULL NAME
-                    </Label>
-                    <Input
-                      id="su-name"
-                      autoComplete="name"
-                      placeholder="Juan Dela Cruz"
-                      value={suName}
-                      onChange={(e) => setSuName(e.target.value)}
-                      className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="su-email" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                      EMAIL ADDRESS
-                    </Label>
-                    <Input
-                      id="su-email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="Enter your email"
-                      value={suEmail}
-                      onChange={(e) => setSuEmail(e.target.value)}
-                      className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="su-password" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                      PASSWORD
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="su-password"
-                        type={suShowPw ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        placeholder="At least 6 characters"
-                        value={suPassword}
-                        onChange={(e) => setSuPassword(e.target.value)}
-                        className="h-11 border-slate-700 bg-slate-950/60 pr-11 focus-visible:ring-emerald-500/50"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSuShowPw((v) => !v)}
-                        aria-label={suShowPw ? 'Hide password' : 'Show password'}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-emerald-300"
-                      >
-                        {suShowPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {role === 'ADMIN' && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      transition={{ duration: 0.25, ease: 'easeOut' }}
-                      className="space-y-1.5 overflow-hidden"
-                    >
-                      <Label htmlFor="su-admin-code" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                        ADMIN ACCESS CODE
-                      </Label>
-                      <div className="relative">
-                        <KeyRound
-                          className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
-                          aria-hidden
-                        />
-                        <Input
-                          id="su-admin-code"
-                          placeholder="MD-••••-••••"
-                          value={suAdminCode}
-                          onChange={(e) => setSuAdminCode(e.target.value)}
-                          className="h-11 border-slate-700 bg-slate-950/60 pl-9 font-mono focus-visible:ring-emerald-500/50"
-                        />
-                      </div>
-                      <p className="text-[10px] text-slate-500">
-                        Demo club code:{' '}
-                        <span className="font-mono text-emerald-400/90">{ADMIN_ACCESS_CODE}</span>
-                      </p>
-                    </motion.div>
-                  )}
-
-                  {suError && (
-                    <p role="alert" className="flex items-center gap-1.5 text-xs text-red-300">
-                      <AlertCircle className="size-3.5 shrink-0" aria-hidden />
-                      {suError}
-                    </p>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={suBusy}
-                    className={cn(
-                      'h-11 w-full font-bold tracking-wider shadow-[0_0_20px_rgba(16,185,129,0.35)]',
-                      role === 'ADMIN'
-                        ? 'bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:bg-amber-400'
-                        : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
-                    )}
-                  >
-                    {suBusy ? (
-                      <Loader2 className="size-4 animate-spin" aria-hidden />
-                    ) : (
-                      <UserPlus className="size-4" aria-hidden />
-                    )}
-                    {role === 'ADMIN' ? 'CREATE ADMIN ACCOUNT' : 'CREATE STUDENT ACCOUNT'}
-                  </Button>
-
-                  <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-[11px] text-slate-500">
-                    <Users className="size-3" aria-hidden />
-                    Student and admin accounts are separate — pick the portal that matches you.
-                  </p>
-                </motion.form>
-              )}
-            </AnimatePresence>
+              <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-[11px] text-slate-500">
+                <ShoppingBag className="size-3" aria-hidden />
+                Accounts are pre-provisioned for the demo — no self-signup.
+              </p>
+            </motion.form>
           </div>
         </motion.div>
       </div>

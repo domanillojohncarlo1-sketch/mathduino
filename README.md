@@ -75,7 +75,7 @@ Content-Type: application/json
 ```
 
 ```json
-{ "user": { "id": "...", "points": 220, "bottles": 15, "bottlesGoal": 50, "...": "..." },
+{ "user": { "id": "...", "points": 0, "bottles": 0, "bottlesGoal": 50, "...": "..." },
   "token": "64-char-hex-session-token" }
 ```
 
@@ -87,7 +87,7 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 { "type": "recycle" }                  // +1 bottle, +POINTS_PER_BOTTLE points
-{ "type": "quiz", "delta": 15 }        // quiz bonus, clamped 0..25 by the server
+// (the online quiz is practice-only — it never awards points)
 ```
 
 The response returns the fresh `user` object (new `points` / `bottles`) — render that
@@ -213,4 +213,4 @@ prisma/seed.ts                    # demo accounts + sample data
 
 ---
 
-Eco-Tech Club © 2025 · Built for the MD-01 Library Corridor station 🌱
+TechVentures © 2027 · Built for the MD-01 Library Corridor station 🌱

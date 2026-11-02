@@ -119,7 +119,7 @@ export default function Home() {
             <span className="font-semibold tracking-[0.25em] text-slate-300">MATHDUINO</span>
             <span className="hidden sm:inline">· ESP32 Recycling &amp; Math Quiz Station</span>
           </p>
-          <p>Eco-Tech Club © 2025 · Web mirror v1.1 · Role-verified access</p>
+          <p>TechVentures © 2027 · Web mirror v1.1 · Role-verified access</p>
         </div>
       </footer>
     </div>

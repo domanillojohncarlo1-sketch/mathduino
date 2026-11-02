@@ -20,7 +20,6 @@ import QuizPanel from './quiz-panel'
 import RewardShop from './reward-shop'
 import StudentOrdersDialog from './orders-dialog'
 import {
-  BONUS_PER_CORRECT,
   POINTS_PER_BOTTLE,
   SHOP_ITEMS,
   type ShopItem,
@@ -195,19 +194,6 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
     }
   }
 
-  const handleQuizFinish = (correct: number) => {
-    const bonus = correct * BONUS_PER_CORRECT
-    if (bonus > 0) {
-      setPoints((p) => p + bonus)
-      flashLcd('PRACTICE DONE', `BONUS +${bonus} PTS`)
-      toast.success(`Practice complete: +${bonus} bonus points!`)
-      void syncEvent({ type: 'quiz', delta: bonus })
-    } else {
-      flashLcd('PRACTICE DONE', 'TRY AGAIN!')
-      toast.info('Practice complete — try again for bonus points!')
-    }
-  }
-
   const redeem = async (item: ShopItem) => {
     if (points < item.points) return
     inFlightRef.current = true
@@ -362,7 +348,7 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
                   )}
                 </span>
                 <span className="block text-[10px] text-slate-500">
-                  {user.grade ?? 'Student'} · {user.section ?? 'Eco-Tech Club'} ·{' '}
+                  {user.grade ?? 'Student'} · {user.section ?? 'TechVentures'} ·{' '}
                   <span className="font-mono text-emerald-400/90">{user.rfid ?? 'RFID PENDING'}</span>
                 </span>
               </span>
@@ -385,7 +371,7 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
               <div className="mt-4 flex flex-col gap-3 border-t border-slate-800/80 pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs leading-relaxed text-slate-500">
                   Live replica of the two 16x2 character LCDs on{' '}
-                  <span className="font-mono text-slate-400">MD-01</span>. Deposits and bonuses
+                  <span className="font-mono text-slate-400">MD-01</span>. Bottle deposits
                   update both screens instantly.
                 </p>
                 <Button
@@ -467,7 +453,7 @@ export default function StudentPortal({ user, onLogout }: StudentPortalProps) {
         <section className="space-y-4" aria-labelledby="quiz-section">
           <SectionHeading>ONLINE QUIZ PRACTICE</SectionHeading>
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur sm:p-6">
-            <QuizPanel onFinish={handleQuizFinish} />
+            <QuizPanel />
           </div>
         </section>
 

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   }
   if (user.status === 'SUSPENDED') {
     return NextResponse.json(
-      { error: 'This account has been suspended — contact the Eco-Tech Club administrator.' },
+      { error: 'This account has been suspended — contact the TechVentures administrator.' },
       { status: 403 }
     )
   }

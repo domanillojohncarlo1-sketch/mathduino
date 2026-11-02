@@ -38,7 +38,6 @@ export const STUDENT: StudentProfile = {
 
 export const GOAL_BOTTLES = 50
 export const POINTS_PER_BOTTLE = 10
-export const BONUS_PER_CORRECT = 5
 
 /* ---------------- Reward shop ---------------- */
 

@@ -36,21 +36,9 @@ export interface AuthErrorResponse {
 }
 
 /* ------------------------------------------------------------
- * Role verification
- * ------------------------------------------------------------ */
-
-/**
- * Access code required to create an ADMIN account (the admin
- * create-account form is separate from the student one).
- * In production this would be an email-domain check / invite link;
- * the demo uses a shared club code shown on the admin sign-up card.
- */
-export const ADMIN_ACCESS_CODE = 'MD-ADMIN-2025'
-
-/* ------------------------------------------------------------
  * Demo quick-fill credentials (seeded accounts)
- * Accounts are pre-provisioned via prisma/seed.ts. New accounts
- * (student or admin) can also be created from the auth screen.
+ * Accounts are pre-provisioned via prisma/seed.ts — the demo has
+ * no self-serve signup, so these are the only sign-ins available.
  * ------------------------------------------------------------ */
 
 export const DEMO_ACCOUNTS = {
