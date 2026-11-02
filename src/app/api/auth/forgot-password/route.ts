@@ -9,16 +9,20 @@
  * expiry behave exactly like a real reset email would.
  *
  * Step 2 (code + new password) is POST /api/auth/reset-password.
+ *
+ * Reset codes are stored through src/lib/password-reset-store.ts (raw SQL) so
+ * the flow keeps working even when the deployed Prisma client predates the
+ * PasswordReset model.
  */
-import { randomInt } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isValidEmail } from '@/lib/auth'
-import { ensurePasswordResetTable } from '@/lib/ensure-schema'
+import {
+  ensurePasswordResetTable,
+  issueResetCode,
+} from '@/lib/password-reset-store'
 
 export const runtime = 'nodejs'
-
-const CODE_TTL_MINUTES = 15
 
 export async function POST(req: Request) {
   let body: { email?: string }
@@ -46,19 +50,11 @@ export async function POST(req: Request) {
     await ensurePasswordResetTable()
 
     // One live code per account — older codes become invalid immediately.
-    const code = String(randomInt(100000, 1000000))
-    await db.passwordReset.deleteMany({ where: { userId: user.id } })
-    await db.passwordReset.create({
-      data: {
-        userId: user.id,
-        code,
-        expiresAt: new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000),
-      },
-    })
+    const { code, expiresInMin } = await issueResetCode(user.id)
 
     return NextResponse.json({
       sent: true,
-      expiresInMin: CODE_TTL_MINUTES,
+      expiresInMin,
       // Demo mode: no mail provider, so the "email" is surfaced in the UI.
       demoCode: code,
     })

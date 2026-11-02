@@ -6,11 +6,19 @@
  * Verifies the 6-digit code from /api/auth/forgot-password (still within its
  * 15-minute window), swaps the password hash and invalidates every session
  * plus all outstanding reset codes for the account.
+ *
+ * Reset codes are stored through src/lib/password-reset-store.ts (raw SQL) so
+ * the flow keeps working even when the deployed Prisma client predates the
+ * PasswordReset model.
  */
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { SESSION_COOKIE, hashPassword } from '@/lib/auth'
-import { ensurePasswordResetTable } from '@/lib/ensure-schema'
+import {
+  deleteResetCodes,
+  ensurePasswordResetTable,
+  findLatestResetCode,
+} from '@/lib/password-reset-store'
 
 export const runtime = 'nodejs'
 
@@ -45,30 +53,25 @@ export async function POST(req: Request) {
     // Hosted DB may predate this table — create it if missing (no-op otherwise).
     await ensurePasswordResetTable()
 
-    const reset = await db.passwordReset.findFirst({
-      where: { userId: user.id, code },
-      orderBy: { createdAt: 'desc' },
-    })
-    if (!reset) {
+    const reset = await findLatestResetCode(user.id)
+    if (!reset || reset.code !== code) {
       return NextResponse.json({ error: 'Invalid reset code — check and try again.' }, { status: 400 })
     }
     if (reset.expiresAt.getTime() < Date.now()) {
-      await db.passwordReset.deleteMany({ where: { userId: user.id } })
+      await deleteResetCodes(user.id)
       return NextResponse.json(
         { error: 'This reset code expired — request a new one.' },
         { status: 400 }
       )
     }
 
-    await db.$transaction([
-      db.user.update({
-        where: { id: user.id },
-        data: { passwordHash: hashPassword(password) },
-      }),
-      // Consume every code and force re-login on other devices.
-      db.passwordReset.deleteMany({ where: { userId: user.id } }),
-      db.session.deleteMany({ where: { userId: user.id } }),
-    ])
+    // Swap the hash, consume every code and force re-login on other devices.
+    await db.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hashPassword(password) },
+    })
+    await deleteResetCodes(user.id)
+    await db.session.deleteMany({ where: { userId: user.id } })
 
     const res = NextResponse.json({ ok: true })
     // Best-effort: clear the stale session cookie in this browser too.
