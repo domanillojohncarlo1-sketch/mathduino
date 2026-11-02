@@ -36,9 +36,19 @@ export interface AuthErrorResponse {
 }
 
 /* ------------------------------------------------------------
+ * Role verification
+ * ------------------------------------------------------------ */
+
+/**
+ * Access key required to create an ADMIN account. The demo shows the key
+ * on the admin create-account card (production would use invite links).
+ */
+export const ADMIN_ACCESS_CODE = 'MD-ADMIN-2025'
+
+/* ------------------------------------------------------------
  * Demo quick-fill credentials (seeded accounts)
- * Accounts are pre-provisioned via prisma/seed.ts — the demo has
- * no self-serve signup, so these are the only sign-ins available.
+ * Pre-provisioned via prisma/seed.ts — new student/admin accounts
+ * can also be created from the CREATE ACCOUNT tab.
  * ------------------------------------------------------------ */
 
 export const DEMO_ACCOUNTS = {

@@ -54,11 +54,13 @@ bun run dev                 # http://localhost:3000
 | Admin | `admin@mathduino.io` | `admin123` |
 
 > Account creation is **separated by portal**: students create their own
-> account (name + email + password); admins use the dedicated **ADMIN**
-> create-account form and must verify with the access code `MD-ADMIN-2025`.
-> Every new account starts at the demo zero-state: 0 bottles · 0 points.
-> Admins can wipe everything back to that zero-state anytime via **RESET DEMO**
-> in the admin header.
+> account (name + **Card ID** from their physical RFID card + email + password);
+> admins use the dedicated **ADMIN** create-account form and must verify with
+> the access key `MD-ADMIN-2025`. Every new account starts at the demo
+> zero-state: 0 bottles · 0 points. A **Forgot password?** link beneath the
+> demo buttons issues a 6-digit reset code (demo mode — shown in the dialog
+> instead of being emailed; expires in 15 minutes). Admins can wipe everything
+> back to that zero-state anytime via **RESET DEMO** in the admin header.
 
 ## 🔌 API Reference (ESP32-facing)
 

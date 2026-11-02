@@ -17,8 +17,8 @@ model User {
   provider      String    @default("credentials") // credentials | google | github | facebook
   emailVerified Boolean   @default(false)
   status        String    @default("ACTIVE") // ACTIVE | SUSPENDED
-  points        Int       @default(220)
-  bottles       Int       @default(15)
+  points        Int       @default(0)
+  bottles       Int       @default(0)
   bottlesGoal   Int       @default(50)
   grade         String?
   section       String?
@@ -27,6 +27,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   orders        Order[]
+  passwordResets PasswordReset[]
 }
 
 model Session {
@@ -49,4 +50,13 @@ model Order {
   readyAt     DateTime?
   receivedAt  DateTime?
   cancelledAt DateTime?
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String // 6-digit demo reset code (no email provider in the demo)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
