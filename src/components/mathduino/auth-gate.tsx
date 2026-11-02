@@ -1,37 +1,43 @@
 'use client'
 
 // ============================================================
-// MathDuino — Authentication gate (sign-in only)
-// The demo ships with pre-provisioned accounts (prisma/seed.ts):
-//   student@mathduino.io / admin@mathduino.io
-// There is intentionally NO self-signup and NO social sign-in —
-// presenters sign in with the seeded accounts below.
+// MathDuino — Authentication gate
+// Two SEPARATED portal experiences:
+//   · STUDENT — sign in · create student account (name+email+password)
+//   · ADMIN   — sign in · create admin account (requires access code)
+// Every new account starts at the demo zero-state: 0 bottles / 0 points.
 // ============================================================
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   AlertCircle,
   Eye,
   EyeOff,
   GraduationCap,
+  KeyRound,
   Loader2,
   LogIn,
   Recycle,
   ShieldCheck,
   ShoppingBag,
   Sigma,
+  UserPlus,
   Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
 import {
+  ADMIN_ACCESS_CODE,
   DEMO_ACCOUNTS,
   authRequest,
   firstNameOf,
   type AuthUser,
+  type UserRole,
 } from '@/lib/auth-types'
 
 /* ============================================================
@@ -43,7 +49,10 @@ interface AuthGateProps {
 }
 
 export default function AuthGate({ onAuthed }: AuthGateProps) {
-  /* ---- Sign in ---- */
+  const [role, setRole] = useState<UserRole>('STUDENT')
+  const [tab, setTab] = useState<'signin' | 'signup'>('signin')
+
+  /* ---- Sign in (shared by both portals) ---- */
   const [siEmail, setSiEmail] = useState('')
   const [siPassword, setSiPassword] = useState('')
   const [siShowPw, setSiShowPw] = useState(false)
@@ -60,7 +69,11 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
     setSiError(null)
     try {
       const { user } = await authRequest<{ user: AuthUser }>('/api/auth/login', { email, password })
-      toast.success(`Welcome back, ${firstNameOf(user.name)}!`)
+      toast.success(
+        user.role === 'ADMIN'
+          ? `Welcome back, ${firstNameOf(user.name)} — admin console ready.`
+          : `Welcome back, ${firstNameOf(user.name)}!`
+      )
       onAuthed(user)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sign in failed.'
@@ -69,6 +82,56 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
     } finally {
       setSiBusy(false)
     }
+  }
+
+  /* ---- Create account (separated per role) ---- */
+  const [suName, setSuName] = useState('')
+  const [suEmail, setSuEmail] = useState('')
+  const [suPassword, setSuPassword] = useState('')
+  const [suShowPw, setSuShowPw] = useState(false)
+  const [suAdminCode, setSuAdminCode] = useState('')
+  const [suBusy, setSuBusy] = useState(false)
+  const [suError, setSuError] = useState<string | null>(null)
+
+  const doSignUp = async () => {
+    if (suBusy) return
+    const name = suName.trim()
+    const email = suEmail.trim().toLowerCase()
+    if (name.length < 2) return setSuError('Please enter your full name.')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setSuError('Please enter a valid email address.')
+    if (suPassword.length < 6) return setSuError('Password must be at least 6 characters.')
+    if (role === 'ADMIN' && suAdminCode !== ADMIN_ACCESS_CODE) {
+      return setSuError('Invalid admin access code — admins must verify with the club code.')
+    }
+    setSuBusy(true)
+    setSuError(null)
+    try {
+      const { user } = await authRequest<{ user: AuthUser }>('/api/auth/signup', {
+        name,
+        email,
+        password: suPassword,
+        role,
+        adminCode: role === 'ADMIN' ? suAdminCode : undefined,
+      })
+      toast.success(
+        role === 'ADMIN'
+          ? `Admin account created — welcome, ${firstNameOf(user.name)}!`
+          : `Student account created — welcome, ${firstNameOf(user.name)}!`
+      )
+      onAuthed(user)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Account creation failed.'
+      setSuError(msg)
+      toast.error(msg)
+    } finally {
+      setSuBusy(false)
+    }
+  }
+
+  const switchRole = (r: UserRole) => {
+    setRole(r)
+    setSuError(null)
+    setSiError(null)
   }
 
   /* ================= Render ================= */
@@ -100,7 +163,7 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-400">
             ESP32-powered recycling &amp; math quiz station — drop a bottle, answer the challenge,
-            earn points for school supplies. Accounts are provisioned by the MathDuino team.
+            earn points for school supplies. Student and admin portals have separate accounts.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2" aria-label="Hardware stack">
@@ -116,9 +179,9 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
 
           <ul className="mt-8 space-y-3.5">
             {[
-              { icon: ShieldCheck, label: 'Verified student & admin accounts with role-based access' },
-              { icon: Users, label: 'Pre-provisioned accounts — no public sign-ups' },
-              { icon: ShoppingBag, label: 'Students earn & spend points · admins run every station' },
+              { icon: GraduationCap, label: 'Student portal — earn points, take quizzes, shop rewards' },
+              { icon: ShieldCheck, label: 'Admin portal — separate accounts, verified by access code' },
+              { icon: ShoppingBag, label: 'Every new account starts clean: 0 bottles · 0 points' },
             ].map((f) => (
               <li key={f.label} className="flex items-start gap-3 text-sm text-slate-300">
                 <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
@@ -133,7 +196,7 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
           <div className="mt-10 max-w-sm rounded-xl border border-emerald-500/25 bg-[#04120c] p-4 font-mono text-[11px] leading-6 text-emerald-400/90 shadow-[inset_0_0_24px_rgba(16,185,129,0.08)]">
             <p className="text-emerald-600">&gt; MATHDUINO AUTH MODULE v2.4.1</p>
             <p>&gt; SCRYPT PASSWORD VAULT ... OK</p>
-            <p>&gt; ACCOUNTS: PRE-PROVISIONED · NO SIGN-UPS</p>
+            <p>&gt; PORTALS: STUDENT / ADMIN · SEPARATE FLOWS</p>
             <p>
               &gt; AWAITING IDENTITY
               <span className="ml-1 inline-block h-3.5 w-2 animate-pulse bg-emerald-400 align-middle" aria-hidden />
@@ -160,116 +223,339 @@ export default function AuthGate({ onAuthed }: AuthGateProps) {
                 <p className="font-mono text-[10px] font-bold tracking-[0.35em] text-slate-500">
                   MATHDUINO PORTAL
                 </p>
-                <h1 className="mt-0.5 text-lg font-bold text-slate-100">Sign in to continue</h1>
+                <h1 className="mt-0.5 text-lg font-bold text-slate-100">
+                  {tab === 'signin'
+                    ? `Sign in as ${role === 'ADMIN' ? 'administrator' : 'student'}`
+                    : `Create a ${role === 'ADMIN' ? 'new admin' : 'new student'} account`}
+                </h1>
               </div>
             </div>
 
-            <motion.form
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.15, ease: 'easeOut' }}
-              className="mt-7 space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault()
-                doSignIn(siEmail, siPassword)
+            {/* ---- Role switch: separated student / admin flows ---- */}
+            <div className="mt-6 grid grid-cols-2 gap-2" role="group" aria-label="Choose portal">
+              {(
+                [
+                  {
+                    r: 'STUDENT' as UserRole,
+                    icon: GraduationCap,
+                    title: 'STUDENT',
+                    desc: 'Recycle · quiz · rewards',
+                  },
+                  {
+                    r: 'ADMIN' as UserRole,
+                    icon: ShieldCheck,
+                    title: 'ADMIN',
+                    desc: 'Monitor · manage stations',
+                  },
+                ]
+              ).map((opt) => (
+                <button
+                  key={opt.r}
+                  type="button"
+                  aria-pressed={role === opt.r}
+                  onClick={() => switchRole(opt.r)}
+                  className={cn(
+                    'rounded-xl border p-3 text-left transition-all',
+                    role === opt.r
+                      ? 'border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/50'
+                      : 'border-slate-700 bg-slate-950/50 hover:border-slate-600'
+                  )}
+                >
+                  <opt.icon
+                    className={cn('size-5', role === opt.r ? 'text-emerald-300' : 'text-slate-500')}
+                    aria-hidden
+                  />
+                  <p
+                    className={cn(
+                      'mt-1.5 font-mono text-[11px] font-bold tracking-[0.2em]',
+                      role === opt.r ? 'text-emerald-200' : 'text-slate-300'
+                    )}
+                  >
+                    {opt.title}
+                  </p>
+                  <p className="mt-0.5 text-[10px] leading-snug text-slate-500">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            <Tabs
+              value={tab}
+              onValueChange={(v) => {
+                setTab(v as 'signin' | 'signup')
+                setSiError(null)
+                setSuError(null)
               }}
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="si-email" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                  ACCOUNT EMAIL
-                </Label>
-                <Input
-                  id="si-email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@school.edu"
-                  value={siEmail}
-                  onChange={(e) => setSiEmail(e.target.value)}
-                  className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
-                />
-              </div>
+              <TabsList className="mt-5 grid h-11 w-full grid-cols-2 bg-slate-950/70">
+                <TabsTrigger
+                  value="signin"
+                  className="font-mono text-[11px] font-bold tracking-[0.2em] data-[state=active]:text-emerald-300"
+                >
+                  SIGN IN
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="font-mono text-[11px] font-bold tracking-[0.2em] data-[state=active]:text-emerald-300"
+                >
+                  <UserPlus className="mr-1 inline size-3" aria-hidden />
+                  CREATE ACCOUNT
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="si-password" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
-                  PASSWORD
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="si-password"
-                    type={siShowPw ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={siPassword}
-                    onChange={(e) => setSiPassword(e.target.value)}
-                    className="h-11 border-slate-700 bg-slate-950/60 pr-11 focus-visible:ring-emerald-500/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setSiShowPw((v) => !v)}
-                    aria-label={siShowPw ? 'Hide password' : 'Show password'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-emerald-300"
+            <AnimatePresence mode="wait" initial={false}>
+              {/* --------------- SIGN IN --------------- */}
+              {tab === 'signin' && (
+                <motion.form
+                  key="signin"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  className="mt-6 space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    doSignIn(siEmail, siPassword)
+                  }}
+                >
+                  <div className="space-y-1.5">
+                    <Label htmlFor="si-email" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                      EMAIL ADDRESS
+                    </Label>
+                    <Input
+                      id="si-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="Enter your email"
+                      value={siEmail}
+                      onChange={(e) => setSiEmail(e.target.value)}
+                      className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="si-password" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                      PASSWORD
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="si-password"
+                        type={siShowPw ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        value={siPassword}
+                        onChange={(e) => setSiPassword(e.target.value)}
+                        className="h-11 border-slate-700 bg-slate-950/60 pr-11 focus-visible:ring-emerald-500/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSiShowPw((v) => !v)}
+                        aria-label={siShowPw ? 'Hide password' : 'Show password'}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-emerald-300"
+                      >
+                        {siShowPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {siError && (
+                    <p role="alert" className="flex items-center gap-1.5 text-xs text-red-300">
+                      <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                      {siError}
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={siBusy}
+                    className="h-11 w-full bg-emerald-500 font-bold tracking-wider text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:bg-emerald-400"
                   >
-                    {siShowPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                  </button>
-                </div>
-              </div>
+                    {siBusy ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : (
+                      <LogIn className="size-4" aria-hidden />
+                    )}
+                    {role === 'ADMIN' ? 'SIGN IN TO ADMIN' : 'SIGN IN TO STUDENT'}
+                  </Button>
 
-              {siError && (
-                <p role="alert" className="flex items-center gap-1.5 text-xs text-red-300">
-                  <AlertCircle className="size-3.5 shrink-0" aria-hidden />
-                  {siError}
-                </p>
+                  {/* Demo quick-fill — the two pre-provisioned accounts */}
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={siBusy}
+                      onClick={() => {
+                        switchRole('STUDENT')
+                        setSiEmail(DEMO_ACCOUNTS.student.email)
+                        setSiPassword(DEMO_ACCOUNTS.student.password)
+                        doSignIn(DEMO_ACCOUNTS.student.email, DEMO_ACCOUNTS.student.password)
+                      }}
+                      className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+                    >
+                      <GraduationCap className="mr-1 inline size-3 text-emerald-400" aria-hidden />
+                      TRY STUDENT DEMO
+                    </button>
+                    <button
+                      type="button"
+                      disabled={siBusy}
+                      onClick={() => {
+                        switchRole('ADMIN')
+                        setSiEmail(DEMO_ACCOUNTS.admin.email)
+                        setSiPassword(DEMO_ACCOUNTS.admin.password)
+                        doSignIn(DEMO_ACCOUNTS.admin.email, DEMO_ACCOUNTS.admin.password)
+                      }}
+                      className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+                    >
+                      <ShieldCheck className="mr-1 inline size-3 text-emerald-400" aria-hidden />
+                      TRY ADMIN DEMO
+                    </button>
+                  </div>
+                </motion.form>
               )}
 
-              <Button
-                type="submit"
-                disabled={siBusy}
-                className="h-11 w-full bg-emerald-500 font-bold tracking-wider text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:bg-emerald-400"
-              >
-                {siBusy ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : (
-                  <LogIn className="size-4" aria-hidden />
-                )}
-                SIGN IN
-              </Button>
-
-              {/* Demo quick-fill — the two pre-provisioned accounts */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                <button
-                  type="button"
-                  disabled={siBusy}
-                  onClick={() => {
-                    setSiEmail(DEMO_ACCOUNTS.student.email)
-                    setSiPassword(DEMO_ACCOUNTS.student.password)
-                    doSignIn(DEMO_ACCOUNTS.student.email, DEMO_ACCOUNTS.student.password)
+              {/* --------------- CREATE ACCOUNT --------------- */}
+              {tab === 'signup' && (
+                <motion.form
+                  key={`signup-${role}`}
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  className="mt-6 space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    doSignUp()
                   }}
-                  className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
                 >
-                  <GraduationCap className="mr-1 inline size-3 text-emerald-400" aria-hidden />
-                  TRY STUDENT DEMO
-                </button>
-                <button
-                  type="button"
-                  disabled={siBusy}
-                  onClick={() => {
-                    setSiEmail(DEMO_ACCOUNTS.admin.email)
-                    setSiPassword(DEMO_ACCOUNTS.admin.password)
-                    doSignIn(DEMO_ACCOUNTS.admin.email, DEMO_ACCOUNTS.admin.password)
-                  }}
-                  className="rounded-full border border-slate-700 bg-slate-950/60 px-3 py-1.5 font-mono text-[10px] tracking-[0.15em] text-slate-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
-                >
-                  <ShieldCheck className="mr-1 inline size-3 text-emerald-400" aria-hidden />
-                  TRY ADMIN DEMO
-                </button>
-              </div>
+                  {role === 'STUDENT' ? (
+                    <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-[11px] leading-relaxed text-slate-300">
+                      <GraduationCap className="mr-1 inline size-3.5 text-emerald-400" aria-hidden />
+                      Student account — recycle bottles, answer math challenges, spend points in
+                      the reward shop. Starts at <span className="font-semibold text-emerald-300">0 bottles · 0 points</span>.
+                    </p>
+                  ) : (
+                    <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-slate-300">
+                      <ShieldCheck className="mr-1 inline size-3.5 text-amber-400" aria-hidden />
+                      Administrator account — monitor the station, fulfil reward orders. Requires
+                      the club access code below.
+                    </p>
+                  )}
 
-              <p className="pt-1 text-center text-[11px] leading-relaxed text-slate-500">
-                Accounts are pre-provisioned by the MathDuino team.
-                <br />
-                Ask the admin to be enrolled — there is no public sign-up.
-              </p>
-            </motion.form>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-name" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                      FULL NAME
+                    </Label>
+                    <Input
+                      id="su-name"
+                      autoComplete="name"
+                      placeholder="Juan Dela Cruz"
+                      value={suName}
+                      onChange={(e) => setSuName(e.target.value)}
+                      className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-email" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                      EMAIL ADDRESS
+                    </Label>
+                    <Input
+                      id="su-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="Enter your email"
+                      value={suEmail}
+                      onChange={(e) => setSuEmail(e.target.value)}
+                      className="h-11 border-slate-700 bg-slate-950/60 focus-visible:ring-emerald-500/50"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-password" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                      PASSWORD
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="su-password"
+                        type={suShowPw ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder="At least 6 characters"
+                        value={suPassword}
+                        onChange={(e) => setSuPassword(e.target.value)}
+                        className="h-11 border-slate-700 bg-slate-950/60 pr-11 focus-visible:ring-emerald-500/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSuShowPw((v) => !v)}
+                        aria-label={suShowPw ? 'Hide password' : 'Show password'}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-emerald-300"
+                      >
+                        {suShowPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {role === 'ADMIN' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                      className="space-y-1.5 overflow-hidden"
+                    >
+                      <Label htmlFor="su-admin-code" className="font-mono text-[10px] tracking-[0.25em] text-slate-400">
+                        ADMIN ACCESS CODE
+                      </Label>
+                      <div className="relative">
+                        <KeyRound
+                          className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
+                          aria-hidden
+                        />
+                        <Input
+                          id="su-admin-code"
+                          placeholder="MD-••••-••••"
+                          value={suAdminCode}
+                          onChange={(e) => setSuAdminCode(e.target.value)}
+                          className="h-11 border-slate-700 bg-slate-950/60 pl-9 font-mono focus-visible:ring-emerald-500/50"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Demo club code:{' '}
+                        <span className="font-mono text-emerald-400/90">{ADMIN_ACCESS_CODE}</span>
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {suError && (
+                    <p role="alert" className="flex items-center gap-1.5 text-xs text-red-300">
+                      <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                      {suError}
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={suBusy}
+                    className={cn(
+                      'h-11 w-full font-bold tracking-wider shadow-[0_0_20px_rgba(16,185,129,0.35)]',
+                      role === 'ADMIN'
+                        ? 'bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:bg-amber-400'
+                        : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                    )}
+                  >
+                    {suBusy ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : (
+                      <UserPlus className="size-4" aria-hidden />
+                    )}
+                    {role === 'ADMIN' ? 'CREATE ADMIN ACCOUNT' : 'CREATE STUDENT ACCOUNT'}
+                  </Button>
+
+                  <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-[11px] text-slate-500">
+                    <Users className="size-3" aria-hidden />
+                    Student and admin accounts are separate — pick the portal that matches you.
+                  </p>
+                </motion.form>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       </div>

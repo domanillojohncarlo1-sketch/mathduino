@@ -67,7 +67,7 @@ src/
 ├── app/
 │   ├── page.tsx                  ← single route: renders AuthGate → Student/Admin portal
 │   └── api/                      ← ALL backend endpoints (one folder per URL)
-│       ├── auth/                 ← login · session · logout (NO public signup)
+│       ├── auth/                 ← login · signup (separated student/admin flows) · session · logout
 │       ├── device/events/        ← 🤖 MACHINE-ONLY: bottle + quiz from ESP32 (device key)
 │       ├── student/
 │       │   ├── state/            ← live poll endpoint (portal refreshes from here)
@@ -154,6 +154,7 @@ simple, deployable anywhere, and fast enough for a hallway machine.
 | Endpoint | Auth | Purpose |
 |---|---|---|
 | `POST /api/auth/login` | — | sign in → cookie + bearer token |
+| `POST /api/auth/signup` | — | create STUDENT account, or ADMIN with access code |
 | `GET  /api/auth/session` | cookie/bearer | current user |
 | `POST /api/auth/logout` | cookie/bearer | end session |
 | `POST /api/device/events` | `X-Device-Key` | 🤖 machine: recycle / quiz by RFID |

@@ -53,9 +53,11 @@ bun run dev                 # http://localhost:3000
 | Student | `student@mathduino.io` | `student123` |
 | Admin | `admin@mathduino.io` | `admin123` |
 
-> There is **no public sign-up** — the two accounts above are pre-provisioned
-> and are the only accounts the demo needs. Admins can wipe the demo back to
-> its zero-state (0 bottles / 0 points, no orders) anytime via **RESET DEMO**
+> Account creation is **separated by portal**: students create their own
+> account (name + email + password); admins use the dedicated **ADMIN**
+> create-account form and must verify with the access code `MD-ADMIN-2025`.
+> Every new account starts at the demo zero-state: 0 bottles · 0 points.
+> Admins can wipe everything back to that zero-state anytime via **RESET DEMO**
 > in the admin header.
 
 ## 🔌 API Reference (ESP32-facing)
@@ -193,7 +195,7 @@ at home (then expose via Cloudflare Tunnel).
 
 ```
 src/app/page.tsx                  # role router (auth gate → student/admin portal)
-src/app/api/auth/*                # login · session · logout (no public signup)
+src/app/api/auth/*                # login · signup (separated student/admin) · session · logout
 src/app/api/device/events         # 🤖 machine-only: bottle + quiz from ESP32
 src/app/api/student/state         # live poll endpoint (portal auto-refresh)
 src/app/api/student/events        # web-side recycle / quiz event ingestion
