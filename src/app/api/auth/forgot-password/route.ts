@@ -14,6 +14,7 @@ import { randomInt } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isValidEmail } from '@/lib/auth'
+import { ensurePasswordResetTable } from '@/lib/ensure-schema'
 
 export const runtime = 'nodejs'
 
@@ -39,6 +40,9 @@ export async function POST(req: Request) {
       { status: 404 }
     )
   }
+
+  // Hosted DB may predate this table — create it if missing (no-op otherwise).
+  await ensurePasswordResetTable()
 
   // One live code per account — older codes become invalid immediately.
   const code = String(randomInt(100000, 1000000))

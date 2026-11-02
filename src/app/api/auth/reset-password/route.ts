@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { SESSION_COOKIE, hashPassword } from '@/lib/auth'
+import { ensurePasswordResetTable } from '@/lib/ensure-schema'
 
 export const runtime = 'nodejs'
 
@@ -39,6 +40,9 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: 'No account found with this email address.' }, { status: 404 })
   }
+
+  // Hosted DB may predate this table — create it if missing (no-op otherwise).
+  await ensurePasswordResetTable()
 
   const reset = await db.passwordReset.findFirst({
     where: { userId: user.id, code },
